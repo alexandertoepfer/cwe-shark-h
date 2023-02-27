@@ -4,6 +4,6 @@
 
 
 
-# Sartorius Christmas Challenge 2022 - Gift with a padlock
+# Salt-Hash Approximation Recovery-attack with Known plaintext. Hashcat variant
 
 TODO
