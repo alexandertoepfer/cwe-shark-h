@@ -506,37 +506,77 @@ std::map<std::string, std::string>* users(std::string& text) {
   return map;
 }
 
+//######################################################################
+
 int main() {
   lcgs lcgs;
   sha256<am_hash> sha256;
   md5<am_hash> md5;
   aes128 aes128;
 
-  //$aes128.key = MyKey123
-  //mode = am_hash($pass) + $salt.rand
-  //hash = hash + ul_to_hexs(rand()).c_str(); -> am_hash($pass = X)
-  //$salt.rand = hash - am_hash($pass = X); -> $salt.rand.seed
+  /*
+   * Calculate the rand salt based on the known user entry.
+   *
+   * @param h Hash with salt.
+   * @param p Known pass.
+   */
+  auto salt = [&](std::string h, std::string p) -> std::string {
+    am_hash h1 = h.c_str(), b = sha256(p), c = md5(p);
+
+    levenshtein l(h1);
+    am_hash r = l.distance(b, c).closest();
+    std::cout << r.type() << r.c_str() << std::endl;
+
+    std::string o = "";
+    am_hash m = bit_mask(r, h1, o);
+    std::cout << m.type() << m.c_str() << std::endl;
+    return o;
+  };
+
+  /*
+   * Predict salt of other hashes.
+   *
+   * @param h List of salted hashes.
+   * @param n Prng sequence.
+   */
+  auto predict = [&](std::list<std::string> h, std::vector<int>& n) -> std::string {
+    std::stringstream str;
+    for(auto& h1 : h) {
+      am_hash d, h2 = h1.c_str();
+      for(auto& i : n) {
+        d = h2;
+        // Hash guesses based on prng prediction
+        am_hash s = d - ul_to_hexs(i).c_str();
+        str << s.str() << std::endl;
+      }
+      str << h2.str().
+             substr(0, h2.str().length() - lcgs.mask()).
+             append(lcgs.mask(), '*') << std::endl;
+    }
+    return str.str();
+  };
 
   /*
    * Vulnerable code snippet
+   * mode = am_hash($pass) + $salt.rand
    *
    * srand(time(NULL)); //=> srand(16743298)
    * rand(); rand();
    * std::string key = "MyKey123";
-   * am_hash h1 = "?", h2 = "?", h3 = "?";
+   * am_hash h1 = "example", h2 = "example", h3 = "example";
    * h1 = h1 + ul_to_hexs(rand()).c_str();
    * h2 = h2 + ul_to_hexs(rand()).c_str();
    * h3 = h3 + ul_to_hexs(rand()).c_str();
    * std::string json = "{\n\
    * \"USERS\": {\n\
-   *   \"USER1\": \"" + h1.c_str() + "\",\n\
-   *   \"USER2\": \"" + h2.c_str() + "\",\n\
-   *   \"USER3\": \"" + h3.c_str() + "\",\n\
+   *   \"USER1\": \"" + h1.str() + "\",\n\
+   *   \"USER2\": \"" + h2.str() + "\",\n\
+   *   \"USER3\": \"" + h3.str() + "\",\n\
    * }\n}";
    * std::cout << format(aes128.encrypt(json, key)) << std::endl;
    */
 
-  std::string key = "?";
+  std::string key = "MyKey123";
   std::ifstream f("data.js.aes");
   std::stringstream buffer;
   buffer << f.rdbuf();
@@ -547,56 +587,13 @@ int main() {
   // Attack: CWE-760 Use of a One-Way Hash with a Predictable Salt
   //am_hash($pass) + $salt.prng =>
   //am_hash($pass append $salt.crng)
-  if(false) {
-    std::map<std::string, std::string>& map = *users(text);
-    std::string p = "test1234";
 
-    //$pass_n = am_hash^-1(am_hash($pass) - $salt.rand);
-    am_hash d, h = map["USER1"].c_str(), // p = test1234
-            h2 = map["USER2"].c_str(), // p = ?
-            h3 = map["USER3"].c_str(); // p = ?
-
-    am_hash b = sha256(p);
-    am_hash c = md5(p);
-
-    levenshtein l(h);
-    am_hash r = l.distance(b, c).closest();
-    std::cout << r.type() << r.c_str() << std::endl;
-
-    std::string o = "";
-    am_hash m = bit_mask(r, h, o);
-    std::cout << m.type() << m.c_str() << std::endl;
-    std::cout << o << std::endl << std::endl;
-
-    d = h2;
-    // Problem solve the seed of the prng ~20 hours
-    //$salt.rand.seed = 2,147,483,647
-    //42 hours
-    std::vector<int>& n = lcgs(std::stoi(o));
-    std::cout << lcgs.seed() << std::endl;
-    for(auto& i : n) {
-        d = h2;
-        // Hash guesses based on prng prediction
-        am_hash s = d - ul_to_hexs(i).c_str();
-        std::cout << s.str() << std::endl;
-    }
-    d = h3;
-    for(auto& i : n) {
-        d = h3;
-        am_hash s = d - ul_to_hexs(i).c_str();
-        std::cout << s.str() << std::endl;
-    }
-
-    // Salt magnitude prediction for attack via partial match
-    lcgs.seed(std::stoi(o)).rand();
-    std::cout << std::endl <<
-      h2.str().
-      substr(0, h2.str().length() - lcgs.mask()).
-      append(lcgs.mask(), '*') << std::endl;
-    std::cout << h3.str().
-                 substr(0, h3.str().length() - lcgs.mask()).
-                 append(lcgs.mask(), '*') << std::endl;
-  }
+  std::map<std::string, std::string>& map = (*users(text));
+  std::string o = salt(map["USER1"], "test1234");
+  std::cout << "$salt.rand=" << o << std::endl << std::endl;
+  std::vector<int>& n = lcgs(std::stoi(o)); // ~21 hours
+  std::cout << "$salt.rand.seed=" << lcgs.seed() << std::endl;
+  std::cout << predict({map["USER2"], map["USER3"]}, n) << std::endl;
 
   // Hashcat strategies used to compromise accounts:
   //hashcat.exe -m 0 ./md5_salt_guess.hash -a 0 ./rockyou-extended.dict &
