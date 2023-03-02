@@ -586,7 +586,7 @@ int main() {
 
   // Attack: CWE-760 Use of a One-Way Hash with a Predictable Salt
   //am_hash($pass) + $salt.prng =>
-  //am_hash($pass append $salt.crng)
+  //am_hash($pass + $salt.crng)
 
   std::map<std::string, std::string>& map = (*users(text));
   std::string o = salt(map["USER1"], "test1234");
