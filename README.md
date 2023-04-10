@@ -1,3 +1,4 @@
 # Salt-Hash Approximation Recovery-attack with Known plaintext. Hashcat variant
+Contents
 
-## Attack: CWE-760 Use of a One-Way Hash with a Predictable Salt
+## CWE-760 Use of a One-Way Hash with a Predictable Salt
