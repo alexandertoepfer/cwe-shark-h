@@ -55,7 +55,7 @@ std::string hex_to_string(const std::string& input) {
     throw std::invalid_argument("odd length");
   std::string output;
   output.reserve(len / 2);
-  for(auto it = input.begin(); it != input.end()) {
+  for(auto it = input.begin(); it != input.end();) {
     int high = hex_value(*it++);
     int low = hex_value(*it++);
     output.push_back(high << 4 | low);
@@ -63,13 +63,13 @@ std::string hex_to_string(const std::string& input) {
   return output;
 }
 
-std::string ul_to_hexs(unsigned long t) {
+std::string hexstr(unsigned long t) {
   std::ostringstream str;
   str << std::hex << t;
   return str.str();
 }
 
-unsigned long hexs_to_ul(std::string t) {
+unsigned long ul(std::string t) {
   std::stringstream str;
   unsigned long x;
   str << std::hex << t;
@@ -92,10 +92,26 @@ std::string unformat(std::string str) {
   return str;
 }
 
-size_t m_k = 0;
-std::string nextqtd(std::string text) {
-      size_t x = text.find('\"', m_k);
-      size_t y = text.find('\"', x+1);
-      m_k = y+1;
-      return text.substr(x+1, y-x-1);
+template <typename T, typename ... U>
+auto wrap (T& arg, U& ... args) {
+   return std::vector<std::reference_wrapper<T>> { std::ref(arg), std::ref(args)... };
+}
+
+std::string (*comma)(std::string, uint64_t) = [](std::string a, uint64_t b) {
+  return std::move(a) + ',' + std::to_string(b);
+};
+template<typename T>
+std::string join(std::vector<T> const & vec,
+                 std::string (*func)(std::string, T)) {
+  return std::accumulate(std::next(vec.begin()), vec.end(),
+                         std::to_string(vec[0]),
+                         func);
+}
+
+template<typename T>
+std::string toHex(T t) {
+  std::stringstream stream;
+  stream << std::hex << t;
+  std::string result(stream.str());
+  return result;
 }

