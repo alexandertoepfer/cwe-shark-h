@@ -39,7 +39,7 @@
  * This is a demonstrative(1) recovery attack with which any low privilege user of the system
  * can potentially steal user credentials and perform actions using a different identity,
  * this works by exploiting the password reset feature shortly after a finished update cycle
- * in order for the attacker to map possible prng sequences to salts for hash predictions.
+ * in combination with data containers for the attacker to map possible prng sequences to salts for hash predictions.
  *
  * (1): Assumptions regarding the customer environment were made upfront,
  *      which might not be accurately representative.
