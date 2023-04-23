@@ -27,7 +27,7 @@ if(!rlcg.solution().empty())
 
 ### CWE-760 Use of a One-Way Hash with a Predictable Salt
 One-way cryptographic hash against an input that should not be reversible, such as a password, but uses a predictable salt as part of the input.
-![](https://chart.apis.google.com/chart?cht=tx&chl=h:=md5(\$pass)%20+%20\$salt.prng%20\Rightarrow%20md5%20=%20h-\$salt.prng)
+![](https://chart.apis.google.com/chart?cht=tx&chl=h%3A%3Dmd5%28%5C%24pass%29%2B%5C%24salt.prng%5CRightarrow%20md5%3Dh-%5C%24salt.prng)
 
 ```
 hashcat.exe -m 0 ./md5_salt_guess.hash -a 0 -d 1 ./rockyou-extended.dict & hashcat.exe -m 0 ./md5_salt_guess.hash -a 6 -d 1 -1 "!$??" ./rockyou-extended.dict ?1 &^
