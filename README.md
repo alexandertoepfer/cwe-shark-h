@@ -16,7 +16,7 @@ in combination with data containers for the attacker to map possible prng sequen
 ### CWE-338 Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)
 Uses a Pseudo-Random Number Generator (PRNG) in a security context, but the PRNG's algorithm is not cryptographically strong.
 ![](https://chart.apis.google.com/chart?cht=tx&chl=f(x_{n+1})=(ax_n+c)\gg%20d%20\pmod%20m%20\Rightarrow%20f^{-1}(y_n)=a^{-1}(y_n-c)\gg%20d%20\pmod%20m)
-![](https://chart.apis.google.com/chart?cht=tx&chl=y_n:=\left%20\lfloor%20x_n/2^31%20\pmod%20m%20\right%20\rfloor)
+![](https://chart.apis.google.com/chart?cht=tx&chl=y_n:=\left%20\lfloor%20x_n/2^{31}%20\pmod%20m%20\right%20\rfloor)
 
 ```c
 //for d=1
