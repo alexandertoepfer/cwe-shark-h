@@ -6,7 +6,9 @@ THE INFORMATION PRESENTED IS FOR EDUCATIONAL PURPOSES ONLY AND DOES NOT REPRESEN
 This is a demonstrative recovery attack with which any low privilege user of the system
 can potentially steal user credentials and perform actions using a different identity,
 this works by exploiting the password reset feature shortly after a finished update cycle
-in combination with data containers for the attacker to map possible prng sequences to salts for hash predictions.
+in combination with data containers for the attacker to map possible prng sequences to salts for hash predictions,
+the attack does not set off any data integrity measures, cyber forensics would only notice traces of the attack once
+the attacker is already using compromised credentials, making it hard if not impossible to identify the source.
 
 ## Summary
   1. Remove nearby hash salts by iteration of lcg parameters with known points in sequence
