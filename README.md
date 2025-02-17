@@ -1,12 +1,10 @@
 # Salt-Hash Approximation Recovery-attack with Known plaintext using data containers (Hashcat)
-> :warning: **Disclaimer**: PLEASE BE AWARE THAT THE VULNERABILITY HAS BEEN IDENTIFIED AND SUCCESSFULLY CLOSED.
-NO KNOWN ATTACKS HAVE BEEN EXECUTED USING THIS VULNERABILITY AND NO DATA WAS OBTAINABLE BY THIRD PARTIES.
-THE INFORMATION PRESENTED IS FOR EDUCATIONAL PURPOSES ONLY AND DOES NOT REPRESENT AN ONGOING RISK.
+> :warning: **Disclaimer**: THE INFORMATION PRESENTED IS FOR EDUCATIONAL PURPOSES ONLY.
 
 This is a demonstrative recovery attack with which any low privilege user of the system
 can potentially steal user credentials and perform actions using a different identity,
 this works by exploiting the password reset feature shortly after a finished update cycle
-in combination with data containers for the attacker to map possible prng sequences to salts for hash predictions,
+in combination with backups for the attacker to map possible prng sequences to salts for hash predictions,
 the attack does not set off any data integrity measures, cyber forensics would only notice traces of the attack once
 the attacker is already using compromised credentials, making it hard if not impossible to identify the source.
 
