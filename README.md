@@ -1,4 +1,4 @@
-# Salt-Hash Approximation Recovery-attack with Known plaintext using data containers (Hashcat)
+# Salt-Hash Approximation Recovery-attack with Known plaintext using password backups (Hashcat)
 > :warning: **Disclaimer**: THE INFORMATION PRESENTED IS FOR EDUCATIONAL PURPOSES ONLY.
 
 This is a demonstrative recovery attack with which any low privilege user of the system
