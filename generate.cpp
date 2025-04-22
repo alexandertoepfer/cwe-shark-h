@@ -15,11 +15,6 @@
 #include <ios>
 #include <vector>
 #include <numeric>
-/*
- * PLEASE BE AWARE THAT THE VULNERABILITY HAS BEEN IDENTIFIED AND SUCCESSFULLY CLOSED.
- * NO KNOWN ATTACKS HAVE BEEN EXECUTED USING THIS VULNERABILITY AND NO DATA WAS OBTAINABLE BY THIRD PARTIES.
- * THE INFORMATION PRESENTED IS FOR EDUCATIONAL PURPOSES ONLY AND DOES NOT REPRESENT AN ONGOING RISK.
- */
 
 /*
  * Salt-Hash Approximation Recovery-attack with Known plaintext. Hashcat variant (SHARK-H)
@@ -35,13 +30,6 @@
  *     \ ' `_  '`_    _    ',/ _::_::_ \ _    _/ _::_::_ \   `.,'.,`., \-,-,-,_,_,
  *      `'~~ `'~~ `'~~ `'~~  \(_)(_)(_)/  `~~' \(_)(_)(_)/ ~'`\_.._,._,'_;_;_;_;_;
  *
- * This is a demonstrative(1) recovery attack with which any low privilege user of the system
- * can potentially steal user credentials and perform actions using a different identity,
- * this works by exploiting the password reset feature shortly after a finished update cycle
- * in order for the attacker to map possible prng seeds to hash salts for hash predictions.
- *
- * (1): Assumptions regarding the customer environment were made upfront,
- *      which might not be accurately representative.
  * Author: Alexander Töpfer (https://github.com/alexandertoepfer)
  * Artwork by (https://www.asciiart.eu/)
  */
