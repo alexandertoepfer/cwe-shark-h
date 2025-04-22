@@ -16,11 +16,6 @@
 #include <ios>
 #include <vector>
 #include <bit>
-/*
- * PLEASE BE AWARE THAT THE VULNERABILITY HAS BEEN IDENTIFIED AND SUCCESSFULLY CLOSED.
- * NO KNOWN ATTACKS HAVE BEEN EXECUTED USING THIS VULNERABILITY AND NO DATA WAS OBTAINABLE BY THIRD PARTIES.
- * THE INFORMATION PRESENTED IS FOR EDUCATIONAL PURPOSES ONLY AND DOES NOT REPRESENT AN ONGOING RISK.
- */
 
 /*
  * Salt-Hash Approximation Recovery-attack with Known plaintext. Hashcat variant (SHARK-H)
@@ -36,13 +31,6 @@
  *     \ ' `_  '`_    _    ',/ _::_::_ \ _    _/ _::_::_ \   `.,'.,`., \-,-,-,_,_,
  *      `'~~ `'~~ `'~~ `'~~  \(_)(_)(_)/  `~~' \(_)(_)(_)/ ~'`\_.._,._,'_;_;_;_;_;
  *
- * This is a demonstrative(1) recovery attack with which any low privilege user of the system
- * can potentially steal user credentials and perform actions using a different identity,
- * this works by exploiting the password reset feature shortly after a finished update cycle
- * in combination with data containers for the attacker to map possible prng sequences to salts for hash predictions.
- *
- * (1): Assumptions regarding the customer environment were made upfront,
- *      which might not be accurately representative.
  * Author: Alexander Töpfer (https://github.com/alexandertoepfer)
  * Artwork by (https://www.asciiart.eu/)
  */
@@ -617,7 +605,7 @@ int main() {
   std::cout << "$salt.rand.o2=" << p2 << "; " << std::bit_ceil(p2) << std::endl << std::endl;
 
   rlcg<25214903917, 11, ((uint64_t)(-1ull) >> 16), (uint64_t)(-1u) + 1> rlcg({p1, p2});
-  for(auto s : {map["roger.dennis"], map["johnny.peters"], map["service"], map["administrator"]}) {
+  for(auto s : {map["roger.dennis"], map["johnny.peters"], map["administrator"]}) {
     if(!rlcg.solution().empty())
       std::cout << predict({s}, rlcg.solution()) << std::endl;
   }
