@@ -319,7 +319,6 @@ int main() {
       \"alex-operator\"   :  \"" + h3.str() + "\",\n\
       \"roger.dennis\"    :  \"" + h4.str() + "\",\n\
       \"johnny.peters\"   :  \"" + h5.str() + "\",\n\
-      \"service\"         :  \"" + h6.str() + "\",\n\
   }\n}";
   std::cout << json << std::endl;
   std::cout << format(aes128.encrypt(json, key)) << std::endl << std::endl;
